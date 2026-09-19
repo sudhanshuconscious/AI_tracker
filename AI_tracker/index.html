@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>365-day tracker</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+:root{
+  --bg:#f4f6fb;--surface:#ffffff;--ink:#101828;--muted:#566079;--line:#d9deeb;
+  --logged:#1f3fd1;--logged-ink:#ffffff;--today:#f0a202;--missed:#e4e8f2;
+  --soft:#e9edfb;--focus:#1f3fd1;--danger:#b42318;
+  --f-display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --f-body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1220;--surface:#151c30;--ink:#eef1fa;--muted:#9aa4bd;--line:#263049;
+    --logged:#7f9bff;--logged-ink:#0d1220;--today:#ffc23d;--missed:#1e2742;
+    --soft:#1a2340;--focus:#9db3ff;--danger:#ff8a7a;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1220;--surface:#151c30;--ink:#eef1fa;--muted:#9aa4bd;--line:#263049;
+  --logged:#7f9bff;--logged-ink:#0d1220;--today:#ffc23d;--missed:#1e2742;
+  --soft:#1a2340;--focus:#9db3ff;--danger:#ff8a7a;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.55}
+button,input,textarea{font:inherit;color:inherit}
+.wrap{max-width:1040px;margin:0 auto;padding:40px 20px 72px}
+
+.hero h1{font-family:var(--f-display);font-weight:700;font-size:clamp(2.6rem,9vw,5rem);line-height:1;letter-spacing:-0.03em;margin:0 0 14px}
+.tag{font-size:1.2rem;margin:0 0 4px;max-width:60ch}
+.tag-input{width:100%;max-width:60ch;font-size:1.2rem;padding:6px 10px;margin:0 0 4px -10px;border:1px dashed var(--line);border-radius:8px;background:transparent}
+.range{color:var(--muted);margin:0 0 22px}
+.bar{height:8px;border-radius:99px;background:var(--missed);overflow:hidden;margin-bottom:18px}
+.bar span{display:block;height:100%;background:var(--logged);border-radius:99px}
+.summary{margin:0 0 40px;font-size:1.05rem}
+.num{font-family:var(--f-display);font-weight:700;font-size:1.25em}
+
+h2{font-family:var(--f-display);font-weight:700;font-size:1.5rem;letter-spacing:-0.01em;margin:0 0 6px}
+.sub{color:var(--muted);margin:0 0 18px}
+
+.months{display:grid;grid-template-columns:repeat(auto-fill,minmax(236px,1fr));gap:26px 22px;margin-bottom:48px}
+.mhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.mhead strong{font-family:var(--f-display);font-size:1.05rem}
+.mhead span{color:var(--muted);font-size:.9rem}
+.dow,.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.dow span{font-size:.72rem;color:var(--muted);text-align:center;padding-bottom:2px}
+.gap{aspect-ratio:1}
+.cell{aspect-ratio:1;border:0;border-radius:6px;padding:0;position:relative;font-size:.8rem;font-weight:600;line-height:1;
+  background:var(--missed);color:var(--muted);cursor:pointer}
+.cell.logged{background:var(--logged);color:var(--logged-ink)}
+.cell.future{background:transparent;box-shadow:inset 0 0 0 1px var(--line);cursor:default}
+.cell.today{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--today)}
+.cell.sel{outline:2px solid var(--ink);outline-offset:2px}
+.cell.dirty::after{content:"";position:absolute;top:3px;right:3px;width:6px;height:6px;border-radius:50%;background:var(--today)}
+.cell:focus-visible,.btn:focus-visible,.link:focus-visible,textarea:focus-visible,.tag-input:focus-visible,.more:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+.key{display:flex;flex-wrap:wrap;gap:8px 20px;color:var(--muted);font-size:.9rem;margin:-26px 0 44px}
+.key span{display:inline-flex;align-items:center;gap:8px}
+.key i{width:14px;height:14px;border-radius:4px;display:inline-block;background:var(--missed)}
+.key i.l{background:var(--logged)}
+.key i.t{background:transparent;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--today)}
+.key i.f{background:transparent;box-shadow:inset 0 0 0 1px var(--line)}
+
+.editor{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:48px;scroll-margin-top:16px}
+.editor h2{margin-bottom:2px}
+.editor .sub{margin-bottom:14px}
+textarea{width:100%;min-height:140px;resize:vertical;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);line-height:1.5}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-top:12px}
+.count{color:var(--muted);font-size:.88rem;margin-left:auto}
+.btn{border:0;border-radius:10px;padding:10px 20px;background:var(--logged);color:var(--logged-ink);font-weight:700;cursor:pointer}
+.btn[disabled]{opacity:.45;cursor:default}
+.note{margin:12px 0 0;font-size:.95rem;color:var(--muted)}
+.note.err{color:var(--danger)}
+.empty{color:var(--muted);margin:0}
+.readtext{white-space:pre-wrap;overflow-wrap:anywhere;margin:0}
+
+.entry{border-top:1px solid var(--line);padding:16px 0}
+.entry:last-of-type{border-bottom:1px solid var(--line)}
+.entry-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;margin-bottom:4px}
+.entry-head strong{font-family:var(--f-display);font-size:1.1rem}
+.when{color:var(--muted);font-size:.92rem}
+.entry-text{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;max-width:75ch}
+.link,.more{background:none;border:0;padding:0;color:var(--logged);font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.more{margin-top:14px}
+.foot{margin-top:40px;color:var(--muted);font-size:.92rem}
+
+@media (max-width:520px){
+  .wrap{padding:28px 16px 56px}
+  .editor{padding:16px}
+  .count{margin-left:0}
+}
+@media (prefers-reduced-motion: no-preference){
+  .bar span{transition:width .4s ease}
+  .cell{transition:transform .12s ease}
+  .cell:not(.future):hover{transform:scale(1.08)}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function(){
+'use strict';
+
+/* ---------- constants and state ---------- */
+var TOTAL=365, MAXLEN=2000, LS='dt-drafts-v1';
+var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+var EDIT=/[?&]edit(=|&|$)/.test(location.search);
+var entries={}, tagline='';
+var writer=EDIT, drafts={}, tagDraft=null, showAll=false, notice='', noticeErr=false, sel=null;
+
+/* ---------- dates ---------- */
+function pad(n){return n<10?'0'+n:''+n;}
+function key(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function fmtLong(d){return d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'});}
+function fmtShort(d){return d.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'});}
+
+var DAYS=[], dayIndex={};
+for(var i=0;i<TOTAL;i++){var d=new Date(2026,9,1+i);var x={i:i,d:d,k:key(d)};DAYS.push(x);dayIndex[x.k]=x;}
+var FIRST=DAYS[0].k, LAST=DAYS[TOTAL-1].k;
+
+var now=new Date(), TODAY=key(now);
+var before=TODAY<FIRST, after=TODAY>LAST;
+var todayIdx=before?-1:(after?TOTAL-1:dayIndex[TODAY].i);
+var daysToStart=before?Math.round((Date.UTC(2026,9,1)-Date.UTC(now.getFullYear(),now.getMonth(),now.getDate()))/86400000):0;
+
+function isFuture(k){return k>TODAY;}
+function pl(n,w){return n+' '+w+(n===1?'':'s');}
+function norm(s){return (s||'').trim();}
+
+/* ---------- tiny DOM helper ---------- */
+function el(tag,props){
+  var n=document.createElement(tag);
+  if(props){for(var k in props){var v=props[k];
+    if(v===false||v==null)continue;
+    if(k==='class')n.className=v;
+    else if(k==='text')n.textContent=v;
+    else if(k==='style')n.style.cssText=v;
+    else if(k.slice(0,2)==='on')n.addEventListener(k.slice(2),v);
+    else if(v===true)n.setAttribute(k,'');
+    else n.setAttribute(k,v);
+  }}
+  for(var a=2;a<arguments.length;a++){
+    var kids=[].concat(arguments[a]);
+    for(var j=0;j<kids.length;j++){var c=kids[j];
+      if(c==null||c===false)continue;
+      n.appendChild(c.nodeType?c:document.createTextNode(c));
+    }
+  }
+  return n;
+}
+function num(v){return el('span',{class:'num',text:String(v)});}
+
+/* ---------- derived numbers ---------- */
+function computeStats(){
+  var logged=0;
+  for(var k in entries){if(dayIndex[k]&&norm(entries[k]))logged++;}
+  var cur=0,best=0,run=0,j;
+  for(j=0;j<=todayIdx;j++){
+    if(norm(entries[DAYS[j].k])){run++;if(run>best)best=run;}else run=0;
+  }
+  j=todayIdx;
+  if(j>=0&&!norm(entries[DAYS[j].k]))j--;
+  while(j>=0&&norm(entries[DAYS[j].k])){cur++;j--;}
+  return {logged:logged,cur:cur,best:best};
+}
+
+/* ---------- drafts (edit mode only; kept in this browser) ---------- */
+function dirtyKeys(){return Object.keys(drafts).filter(function(k){return norm(drafts[k])!==norm(entries[k]);});}
+function tagDirty(){return tagDraft!==null&&norm(tagDraft)!==norm(tagline);}
+function dirtyCount(){return dirtyKeys().length+(tagDirty()?1:0);}
+function textFor(k){return k in drafts?drafts[k]:(entries[k]||'');}
+function persist(){try{localStorage.setItem(LS,JSON.stringify({drafts:drafts,tag:tagDraft}));}catch(e){}}
+function loadDrafts(){
+  try{
+    var raw=localStorage.getItem(LS);
+    if(!raw)return;
+    var s=JSON.parse(raw);
+    if(s&&s.drafts){for(var k in s.drafts){
+      if(dayIndex[k]&&!isFuture(k)&&typeof s.drafts[k]==='string'&&norm(s.drafts[k])!==norm(entries[k]))drafts[k]=s.drafts[k];
+    }}
+    if(s&&typeof s.tag==='string'&&norm(s.tag)!==norm(tagline))tagDraft=s.tag;
+    persist();
+  }catch(e){}
+}
+
+/* ---------- selection ---------- */
+function defaultSel(){
+  if(!before&&!after)return TODAY;
+  var ks=Object.keys(entries).filter(function(k){return dayIndex[k];}).sort();
+  if(after&&ks.length)return ks[ks.length-1];
+  return before?FIRST:LAST;
+}
+function select(k,scrollToEditor){
+  sel=k;render();
+  var c=document.querySelector('[data-k="'+k+'"]');
+  if(c&&!scrollToEditor)c.focus({preventScroll:true});
+  if(scrollToEditor){
+    var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var ed=document.getElementById('editor');
+    if(ed)ed.scrollIntoView({behavior:reduce?'auto':'smooth',block:'center'});
+    var ta=document.getElementById('entry-text');
+    if(ta)ta.focus({preventScroll:true});
+  }
+}
+
+/* ---------- copy entries.json ---------- */
+function setNotice(msg,isErr){notice=msg;noticeErr=!!isErr;var n=document.getElementById('notice');if(n){n.textContent=msg;n.className='note'+(isErr?' err':'');}}
+
+function buildJson(){
+  var next={tagline:tagline,entries:{}};
+  for(var k in entries)next.entries[k]=entries[k];
+  dirtyKeys().forEach(function(k){var t=norm(drafts[k]);if(t)next.entries[k]=t;else delete next.entries[k];});
+  if(tagDirty())next.tagline=norm(tagDraft);
+  var sorted={};
+  Object.keys(next.entries).sort().forEach(function(k){sorted[k]=next.entries[k];});
+  next.entries=sorted;
+  return JSON.stringify(next,null,2)+'\n';
+}
+function fallbackCopy(text){
+  var ta=document.createElement('textarea');
+  ta.value=text;ta.setAttribute('readonly','');ta.style.cssText='position:fixed;top:0;left:0;opacity:0';
+  document.body.appendChild(ta);ta.select();
+  var ok=false;try{ok=document.execCommand('copy');}catch(e){}
+  document.body.removeChild(ta);
+  return ok;
+}
+function copyJson(){
+  var text=buildJson();
+  var done=function(){setNotice('Copied. Paste it over the contents of entries.json on GitHub and commit. Render updates the site in about a minute.');};
+  var bad=function(){setNotice('Could not copy automatically. Try again or use a different browser.',true);};
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done,function(){fallbackCopy(text)?done():bad();});
+  }else{fallbackCopy(text)?done():bad();}
+}
+
+/* ---------- partial refresh (keeps textarea focus) ---------- */
+function refreshSaveBar(){
+  var b=document.getElementById('save-btn');
+  if(b){
+    var n=dirtyCount();
+    b.disabled=n===0;
+    b.textContent=n>0?'Copy entries.json ('+n+' changed)':'Copy entries.json';
+  }
+  var c=document.querySelector('[data-k="'+sel+'"]');
+  if(c)c.classList.toggle('dirty',dirtyKeys().indexOf(sel)!==-1);
+}
+
+/* ---------- rendering ---------- */
+function render(){
+  var root=document.getElementById('root');
+  while(root.firstChild)root.removeChild(root.firstChild);
+  var st=computeStats();
+  var elapsed=Math.max(0,todayIdx+1);
+
+  var headline=before?'Starts October 1':(after?'365 days done':'Day '+(todayIdx+1)+' of '+TOTAL);
+  var rangeText=before
+    ?'Begins in '+pl(daysToStart,'day')+'. The year runs from October 1, 2026 to September 30, 2027.'
+    :'October 1, 2026 to September 30, 2027';
+  var tagEl=null;
+  if(writer){
+    tagEl=el('input',{class:'tag-input',type:'text',maxlength:'120','aria-label':'One-line goal',placeholder:'Add a one-line goal',
+      value:tagDraft!==null?tagDraft:tagline,
+      oninput:function(e){tagDraft=e.target.value;persist();refreshSaveBar();}});
+  }else if(norm(tagline)){
+    tagEl=el('p',{class:'tag',text:tagline});
+  }
+  var pct=Math.round(elapsed/TOTAL*100);
+  var bar=el('div',{class:'bar',role:'progressbar','aria-label':'Year progress','aria-valuemin':'0','aria-valuemax':String(TOTAL),'aria-valuenow':String(elapsed)},el('span'));
+  bar.firstChild.style.width=pct+'%';
+
+  var summary;
+  if(before){
+    summary=el('p',{class:'summary',text:'The first entry unlocks on October 1. Each day opens as it arrives.'});
+  }else{
+    var cons=elapsed?Math.round(st.logged/elapsed*100):0;
+    summary=el('p',{class:'summary'},num(st.logged),' of ',num(elapsed),' days logged. Current streak ',num(pl(st.cur,'day')),', longest streak ',num(pl(st.best,'day')),'. Consistency ',num(cons+'%'),'.');
+  }
+  root.appendChild(el('div',{class:'wrap'},
+    el('header',{class:'hero'},el('h1',{text:headline}),tagEl,el('p',{class:'range',text:rangeText}),bar),
+    summary,
+    monthsSection(),
+    editorSection(),
+    feedSection(),
+    el('p',{class:'foot',text:writer?'Edit mode. Nothing is public until you paste the copied entries.json into your repo and commit.':'A daily log, updated by its owner.'})
+  ));
+  refreshSaveBar();
+}
+
+function monthsSection(){
+  var groups=[];
+  DAYS.forEach(function(x){
+    var mk=x.d.getFullYear()*12+x.d.getMonth();
+    var g=groups[groups.length-1];
+    if(!g||g.mk!==mk){g={mk:mk,y:x.d.getFullYear(),m:x.d.getMonth(),days:[]};groups.push(g);}
+    g.days.push(x);
+  });
+  var wrap=el('div',{class:'months'});
+  groups.forEach(function(g){
+    var loggedHere=g.days.filter(function(x){return norm(entries[x.k]);}).length;
+    var cells=[];
+    var offset=(g.days[0].d.getDay()+6)%7;
+    for(var s=0;s<offset;s++)cells.push(el('span',{class:'gap','aria-hidden':'true'}));
+    g.days.forEach(function(x){
+      var has=!!norm(entries[x.k]);
+      var fut=isFuture(x.k);
+      var cls='cell'+(has?' logged':'')+(fut?' future':'')+(x.k===TODAY?' today':'')+(x.k===sel?' sel':'')+(dirtyKeys().indexOf(x.k)!==-1?' dirty':'');
+      cells.push(el('button',{type:'button',class:cls,'data-k':x.k,disabled:fut,
+        'aria-label':'Day '+(x.i+1)+', '+fmtLong(x.d)+(has?', logged':(fut?', not yet open':', nothing logged')),
+        'aria-pressed':x.k===sel?'true':'false',
+        onclick:function(){select(x.k,false);}},String(x.d.getDate())));
+    });
+    wrap.appendChild(el('section',null,
+      el('div',{class:'mhead'},el('strong',{text:MONTHS[g.m]+' '+g.y}),el('span',{text:loggedHere+' of '+g.days.length})),
+      el('div',{class:'dow','aria-hidden':'true'},['M','T','W','T','F','S','S'].map(function(l){return el('span',{text:l});})),
+      el('div',{class:'grid'},cells)
+    ));
+  });
+  var key_=el('div',{class:'key'},
+    el('span',null,el('i',{class:'l'}),'Logged'),
+    el('span',null,el('i'),'Nothing logged'),
+    el('span',null,el('i',{class:'t'}),'Today'),
+    el('span',null,el('i',{class:'f'}),'Not open yet'));
+  var box=el('div');
+  box.appendChild(el('h2',{text:'The year at a glance'}));
+  box.appendChild(el('p',{class:'sub',text:'Pick a day to read what got done.'}));
+  box.appendChild(wrap);
+  box.appendChild(key_);
+  return box;
+}
+
+function editorSection(){
+  var x=dayIndex[sel];
+  var box=el('section',{class:'editor',id:'editor'});
+  box.appendChild(el('h2',{text:'Day '+(x.i+1)}));
+  box.appendChild(el('p',{class:'sub',text:fmtLong(x.d)}));
+  var fut=isFuture(sel);
+  if(fut){
+    box.appendChild(el('p',{class:'empty',text:'This day opens on '+fmtLong(x.d)+'.'}));
+    return box;
+  }
+  if(!writer){
+    var t=norm(entries[sel]);
+    box.appendChild(t?el('p',{class:'readtext',text:t}):el('p',{class:'empty',text:'Nothing logged for this day.'}));
+    return box;
+  }
+  var ta=el('textarea',{id:'entry-text',maxlength:String(MAXLEN),placeholder:'What did you complete today?','aria-label':'What you completed on day '+(x.i+1),
+    oninput:function(e){
+      var v=e.target.value;
+      if(norm(v)===norm(entries[sel])){delete drafts[sel];}else{drafts[sel]=v;}
+      persist();
+      var cnt=document.getElementById('cnt');if(cnt)cnt.textContent=v.length+' / '+MAXLEN;
+      refreshSaveBar();
+    }
+  },textFor(sel));
+  box.appendChild(ta);
+  box.appendChild(el('div',{class:'row'},
+    el('button',{type:'button',class:'btn',id:'save-btn',onclick:copyJson},'Copy entries.json'),
+    el('span',{class:'count',id:'cnt',text:textFor(sel).length+' / '+MAXLEN})
+  ));
+  box.appendChild(el('p',{class:'note'+(noticeErr?' err':''),id:'notice',role:'status',text:notice}));
+  box.appendChild(el('p',{class:'note',text:'Your text stays in this browser until you publish it. To publish: copy, paste over entries.json on GitHub, commit.'}));
+  return box;
+}
+
+function feedSection(){
+  var ks=Object.keys(entries).filter(function(k){return dayIndex[k]&&norm(entries[k]);}).sort().reverse();
+  var box=el('section');
+  box.appendChild(el('h2',{text:'Journal'}));
+  if(!ks.length){
+    box.appendChild(el('p',{class:'empty',text:'Entries show up here as days are logged, newest first.'}));
+    return box;
+  }
+  box.appendChild(el('p',{class:'sub',text:(ks.length===1?'1 entry':ks.length+' entries')+', newest first.'}));
+  var list=showAll?ks:ks.slice(0,10);
+  list.forEach(function(k){
+    var x=dayIndex[k];
+    box.appendChild(el('article',{class:'entry'},
+      el('div',{class:'entry-head'},
+        el('strong',{text:'Day '+(x.i+1)}),
+        el('span',{class:'when',text:fmtShort(x.d)}),
+        writer?el('button',{type:'button',class:'link',onclick:function(){select(k,true);}},'Edit'):null),
+      el('p',{class:'entry-text',text:entries[k]})));
+  });
+  if(ks.length>10){
+    box.appendChild(el('button',{type:'button',class:'more',onclick:function(){showAll=!showAll;render();}},showAll?'Show only the latest 10':'Show all '+ks.length+' entries'));
+  }
+  return box;
+}
+
+/* ---------- start: load entries.json, then draw ---------- */
+fetch('entries.json',{cache:'no-store'})
+  .then(function(r){if(!r.ok)throw new Error('missing');return r.json();})
+  .then(function(j){
+    var e=(j&&typeof j.entries==='object'&&j.entries)?j.entries:{};
+    for(var k in e){if(typeof e[k]==='string')entries[k]=e[k];}
+    tagline=(j&&typeof j.tagline==='string')?j.tagline:'';
+  })
+  .catch(function(){})
+  .then(function(){
+    if(writer)loadDrafts();
+    sel=defaultSel();
+    render();
+  });
+})();
+</script>
+</body>
+</html>
